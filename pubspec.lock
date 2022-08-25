@@ -584,9 +584,9 @@ packages:
   usedesk:
     dependency: "direct main"
     description:
-      name: usedesk
-      url: "https://pub.dartlang.org"
-    source: hosted
+      path: "../usedesk.dart"
+      relative: true
+    source: path
     version: "0.7.0"
   uuid:
     dependency: "direct main"

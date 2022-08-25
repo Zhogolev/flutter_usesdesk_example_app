@@ -17,7 +17,8 @@ dependencies:
   image_picker: ^0.8.5+3
   path_provider: ^2.0.11
   shared_preferences: ^2.0.15
-  usedesk: ^0.7.0
+  usedesk: 
+    path: ./../usedesk.dart
   uuid: ^3.0.6
 
 dev_dependencies:
@@ -29,3 +30,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/assets/
+    - assets/
