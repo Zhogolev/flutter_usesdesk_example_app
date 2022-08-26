@@ -24,12 +24,10 @@ class SharedPreferencesUsedeskChatStorage extends UsedeskChatStorageProvider {
   }
 
   @override
-  Future<String> prepareUploadCache(String filename, Uint8List data) {
-    throw UnimplementedError();
+  Future<String> prepareUploadCache(String filename, Uint8List data) async {
+    return filename;
   }
 
   @override
-  Future<void> removeUploadCache(String filename) {
-    throw UnimplementedError();
-  }
+  Future<void> removeUploadCache(String filename) async {}
 }

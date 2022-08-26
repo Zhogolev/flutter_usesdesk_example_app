@@ -1,21 +1,32 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:camera/camera.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_chat_test_with_use_desk/take_picture_screen.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:mime/mime.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:usedesk/usedesk.dart';
 import 'package:uuid/uuid.dart';
-
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:mime/mime.dart';
 import 'usedesk_db.dart';
+
+Future<XFile?> _takePicture(BuildContext context) async {
+  final cameras = await availableCameras();
+  final firstCamera = cameras.first;
+  final picture = await Navigator.of(context)
+      .push<XFile?>(MaterialPageRoute(builder: (context) {
+    return TakePictureScreen(camera: firstCamera);
+  }));
+  return picture;
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +52,7 @@ Future<void> main() async {
     )
     ..additionalFields = {'2032': 'test', '20231': 't_app'};
 
-  initializeDateFormatting().then((_) => runApp(MyApp(usedeskChat)));
+  runApp(MyApp(usedeskChat));
 }
 
 class MyApp extends StatelessWidget {
@@ -199,7 +210,9 @@ class _ChatPageState extends State<ChatPage> {
       type: FileType.any,
     );
 
-    if (result != null && result.files.single.path != null) {
+    if (result != null &&
+        result.files.single.path != null &&
+        result.files.single.path != '__loading__') {
       final path = result.files.single.path!;
       final message = types.FileMessage(
         author: _user,
@@ -213,19 +226,16 @@ class _ChatPageState extends State<ChatPage> {
 
       final bytes = await (await getlocalFile(path)).readAsBytes();
 
-      widget.usedeskChat.sendFile(result.files.single.name, bytes);
+      widget.usedeskChat
+          .sendFile(result.files.single.path!, bytes, path.hashCode);
       _addMessage(message);
     }
   }
 
   void _handleImageSelection() async {
-    final result = await ImagePicker().pickImage(
-      imageQuality: 70,
-      maxWidth: 1440,
-      source: ImageSource.gallery,
-    );
+    final result = await _takePicture(context);
 
-    if (result != null) {
+    if (result != null && result.path != '__loading__') {
       final bytes = await result.readAsBytes();
       final image = await decodeImageFromList(bytes);
 
@@ -239,7 +249,7 @@ class _ChatPageState extends State<ChatPage> {
         uri: result.path,
         width: image.width.toDouble(),
       );
-      widget.usedeskChat.sendFile(result.name, bytes);
+      widget.usedeskChat.sendFile(result.path, bytes, result.name.hashCode);
       _addMessage(message);
     }
   }
