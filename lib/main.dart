@@ -7,12 +7,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_chat_test_with_use_desk/take_picture_screen.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
-import 'package:flutter_chat_ui/flutter_chat_ui.dart';
+import 'package:flutter_chat_ui/flutter_chat_ui.dart' as ui;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:usedesk/usedesk.dart';
+import 'package:usedesk/usedesk.dart' as usedesk;
 import 'package:uuid/uuid.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:mime/mime.dart';
@@ -32,12 +32,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final prefs = await SharedPreferences.getInstance();
 
-  UsedeskChat usedeskChat = await UsedeskChat.init(
+  usedesk.UsedeskChat usedeskChat = await usedesk.UsedeskChat.init(
     /* Required */
     storage: SharedPreferencesUsedeskChatStorage(prefs),
     companyId: '163798',
+    channelId: '40227',
     debug: true,
-    apiConfig: const ChatApiConfiguration(
+    apiConfig: const usedesk.ChatApiConfiguration(
       urlChat: 'https://pubsubsec.usedesk.ru',
       urlOfflineForm: 'https://secure.usedesk.ru/',
       urlToSendFile: 'https://secure.usedesk.ru/uapi/v1/send_file',
@@ -45,18 +46,18 @@ Future<void> main() async {
   );
 
   usedeskChat
-    ..identify = const IdentifyConfiguration(
-      name: 'Test mobile 3',
-      phoneNumber: 79529029974,
-      additionalId: 'uuid_t_APP_UUID',
+    ..identify = const usedesk.IdentifyConfiguration(
+      name: 'Test mobile 321',
+      phoneNumber: 79529029900,
+      additionalId: 'uuid_t_APP_UUID11',
     )
-    ..additionalFields = {'2032': 'test', '20231': 't_app'};
+    ..additionalFields = {'20266': 'Простой вопрос', '20265': 'se_app'};
 
   runApp(MyApp(usedeskChat));
 }
 
 class MyApp extends StatelessWidget {
-  final UsedeskChat usedeskChat;
+  final usedesk.UsedeskChat usedeskChat;
   const MyApp(this.usedeskChat, {super.key});
 
   @override
@@ -66,7 +67,7 @@ class MyApp extends StatelessWidget {
 }
 
 class ChatPage extends StatefulWidget {
-  final UsedeskChat usedeskChat;
+  final usedesk.UsedeskChat usedeskChat;
   const ChatPage(this.usedeskChat, {super.key});
 
   @override
@@ -76,18 +77,22 @@ class ChatPage extends StatefulWidget {
 class _ChatPageState extends State<ChatPage> {
   List<types.Message> _messages = [];
   final _user = const types.User(
-    id: 'Test mobile 3',
-    firstName: 'Test mobile 3',
+    id: 'Test mobile',
+    firstName: 'Test mobile',
     role: types.Role.user,
   );
+
+  bool isImage(String file) {
+    final fileExt = file.split('.').last.toUpperCase();
+    return ['PNG', 'JPEG', 'JPG'].contains(fileExt);
+  }
 
   @override
   void initState() {
     super.initState();
     _loadMessages();
-    widget.usedeskChat.messagesStream.listen((List<MessageResponse> messages) {
-      for (MessageResponse response in messages) {
-        final msg = response.message;
+    widget.usedeskChat.messagesStream.listen((List<usedesk.Message> messages) {
+      for (usedesk.Message msg in messages) {
         final author = msg.name == _user.firstName || (msg.name ?? "").isEmpty
             ? _user
             : types.User(
@@ -95,22 +100,37 @@ class _ChatPageState extends State<ChatPage> {
                 id: msg.name ?? 'Оператор',
                 role: types.Role.moderator);
 
-        if (response.message.text != null) {
+        if ((msg.text ?? "").isNotEmpty && msg.name == 'UseDesk Bot') {
+          _addMessage(
+            types.TextMessage(
+                text: msg.text!,
+                id: msg.id.toString(),
+                author: const types.User(id: 'system', firstName: 'System')),
+          );
+        } else if ((msg.text ?? "").isNotEmpty) {
           _addMessage(types.TextMessage(
-              text: response.message.text!,
-              id: response.message.id.toString(),
-              author: author));
+              text: msg.text!, id: msg.id.toString(), author: author));
         }
 
-        if (response.message.file != null) {
-          final file = response.message.file!;
-          final size = file.size.split("")[0];
-          _addMessage(types.ImageMessage(
-              name: file.name,
-              uri: file.content,
-              size: num.parse(size),
-              id: response.message.id.toString(),
-              author: author));
+        if (msg.file != null) {
+          final file = msg.file!;
+          final name = file.name.split('/').last;
+          final size = file.size.split("").first;
+          if (isImage(name)) {
+            _addMessage(types.ImageMessage(
+                name: name,
+                uri: file.content,
+                size: num.parse(size),
+                id: name,
+                author: author));
+          } else {
+            _addMessage(types.FileMessage(
+                name: name,
+                uri: file.content,
+                size: num.parse(size),
+                id: name,
+                author: author));
+          }
         }
       }
     });
@@ -125,7 +145,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Chat(
+        body: ui.Chat(
           messages: _messages,
           onAttachmentPressed: _handleAttachmentPressed,
           onMessageTap: _handleMessageTap,
@@ -150,12 +170,6 @@ class _ChatPageState extends State<ChatPage> {
         _messages.insert(0, message);
       });
     }
-  }
-
-  Future<String> get _localPath async {
-    final directory = await getApplicationDocumentsDirectory();
-
-    return directory.path;
   }
 
   void _handleAttachmentPressed() {
@@ -217,7 +231,7 @@ class _ChatPageState extends State<ChatPage> {
       final message = types.FileMessage(
         author: _user,
         createdAt: DateTime.now().millisecondsSinceEpoch,
-        id: const Uuid().v4(),
+        id: result.files.single.name,
         mimeType: lookupMimeType(result.files.single.path!),
         name: result.files.single.name,
         size: result.files.single.size,
@@ -226,8 +240,8 @@ class _ChatPageState extends State<ChatPage> {
 
       final bytes = await (await getlocalFile(path)).readAsBytes();
 
-      widget.usedeskChat
-          .sendFile(result.files.single.path!, bytes, path.hashCode);
+      widget.usedeskChat.sendFile(
+          result.files.single.path!, bytes, result.files.single.name.hashCode);
       _addMessage(message);
     }
   }
@@ -243,13 +257,16 @@ class _ChatPageState extends State<ChatPage> {
         author: _user,
         createdAt: DateTime.now().millisecondsSinceEpoch,
         height: image.height.toDouble(),
-        id: const Uuid().v4(),
+        id: result.name,
         name: result.name,
         size: bytes.length,
         uri: result.path,
         width: image.width.toDouble(),
       );
       widget.usedeskChat.sendFile(result.path, bytes, result.name.hashCode);
+      print('send message with id ');
+      print(result.name);
+      print('send message with id ');
       _addMessage(message);
     }
   }
@@ -320,13 +337,8 @@ class _ChatPageState extends State<ChatPage> {
   }
 
   void _loadMessages() async {
-    final response = await rootBundle.loadString('assets/messages.json');
-    final messages = (jsonDecode(response) as List)
-        .map((e) => types.Message.fromJson(e as Map<String, dynamic>))
-        .toList();
-
     setState(() {
-      _messages = messages;
+      _messages = [];
     });
   }
 }
