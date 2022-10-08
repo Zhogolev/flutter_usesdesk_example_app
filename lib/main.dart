@@ -30,30 +30,127 @@ Future<XFile?> _takePicture(BuildContext context) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
 
-  usedesk.UsedeskChat usedeskChat = await usedesk.UsedeskChat.init(
-    /* Required */
-    storage: SharedPreferencesUsedeskChatStorage(prefs),
-    companyId: '163798',
-    channelId: '40227',
-    debug: true,
-    apiConfig: const usedesk.ChatApiConfiguration(
-      urlChat: 'https://pubsubsec.usedesk.ru',
-      urlOfflineForm: 'https://secure.usedesk.ru/',
-      urlToSendFile: 'https://secure.usedesk.ru/uapi/v1/send_file',
-    ),
-  );
+  runApp(const FirstScreen());
+}
 
-  usedeskChat
-    ..identify = const usedesk.IdentifyConfiguration(
-      name: 'Test mobile 321',
-      phoneNumber: 79529029900,
-      additionalId: 'uuid_t_APP_UUID11',
-    )
-    ..additionalFields = {'20266': 'Простой вопрос', '20265': 'se_app'};
+class FirstScreen extends StatefulWidget {
+  const FirstScreen({Key? key}) : super(key: key);
 
-  runApp(MyApp(usedeskChat));
+  @override
+  State<FirstScreen> createState() => _FirstScreenState();
+}
+
+class _FirstScreenState extends State<FirstScreen> {
+  TextEditingController? controller;
+
+  @override
+  void initState() {
+    controller = TextEditingController(text: '77770000010');
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    controller?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      home: FirstScreenBody(controller: controller),
+    );
+  }
+}
+
+class FirstScreenBody extends StatelessWidget {
+  const FirstScreenBody({
+    Key? key,
+    required this.controller,
+  }) : super(key: key);
+
+  final TextEditingController? controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Center(
+              child: TextField(
+                controller: controller,
+                keyboardType: TextInputType.phone,
+              ),
+            ),
+            const SizedBox(
+              height: 29,
+            ),
+            InkWell(
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  color: Colors.blue,
+                  child: const Text('remove token'),
+                ),
+                onTap: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  final sp = SharedPreferencesUsedeskChatStorage(prefs);
+                  await sp.clearToken();
+                }),
+            const SizedBox(
+              height: 29,
+            ),
+            InkWell(
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                color: Colors.blue,
+                child: const Text('go to chat'),
+              ),
+              onTap: () async {
+                String text = controller?.text ?? '0';
+                int phone = int.parse(text);
+
+                final prefs = await SharedPreferences.getInstance();
+
+                usedesk.UsedeskChat usedeskChat =
+                    await usedesk.UsedeskChat.init(
+                  /* Required */
+                  storage: SharedPreferencesUsedeskChatStorage(prefs),
+                  companyId: '163798',
+                  channelId: '40227',
+                  debug: true,
+                  apiConfig: const usedesk.ChatApiConfiguration(
+                    urlChat: 'https://pubsubsec.usedesk.ru',
+                    urlOfflineForm: 'https://secure.usedesk.ru/',
+                    urlToSendFile:
+                        'https://secure.usedesk.ru/uapi/v1/send_file',
+                  ),
+                );
+
+                usedeskChat
+                  ..identify = usedesk.IdentifyConfiguration(
+                    name: '$phone: remove',
+                    phoneNumber: phone,
+                    additionalId: 'uuid_$phone',
+                  )
+                  ..additionalFields = {
+                    '20266': 'Простой вопрос',
+                    '20265': 'se_app'
+                  };
+
+                Navigator.of(context).push(MaterialPageRoute(builder: (ctx) {
+                  return ChatPage(usedeskChat);
+                }));
+              },
+            )
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -61,9 +158,7 @@ class MyApp extends StatelessWidget {
   const MyApp(this.usedeskChat, {super.key});
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        home: ChatPage(usedeskChat),
-      );
+  Widget build(BuildContext context) => ChatPage(usedeskChat);
 }
 
 class ChatPage extends StatefulWidget {
