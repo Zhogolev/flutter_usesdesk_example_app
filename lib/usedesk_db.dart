@@ -10,7 +10,7 @@ class SharedPreferencesUsedeskChatStorage extends UsedeskChatStorageProvider {
   @override
   Future<String?> getToken() async {
     final token = prefs.getString('token');
-    return null;
+    return token;
   }
 
   @override

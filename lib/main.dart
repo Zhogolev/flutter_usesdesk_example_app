@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:dio/dio.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -11,6 +12,7 @@ import 'package:flutter_chat_ui/flutter_chat_ui.dart' as ui;
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:usedesk/usedesk.dart' as usedesk;
 import 'package:uuid/uuid.dart';
@@ -117,10 +119,13 @@ class FirstScreenBody extends StatelessWidget {
 
                 usedesk.UsedeskChat usedeskChat =
                     await usedesk.UsedeskChat.init(
+                  clientApi: usedesk.UsedeskClientApi(
+                      Dio(BaseOptions(baseUrl: 'https://secure.usedesk.ru/'))
+                        ..interceptors.add(PrettyDioLogger(requestBody: true))),
                   /* Required */
                   storage: SharedPreferencesUsedeskChatStorage(prefs),
                   companyId: '163798',
-                  channelId: '40227',
+                  channelId: '41396',
                   debug: true,
                   apiConfig: const usedesk.ChatApiConfiguration(
                     urlChat: 'https://pubsubsec.usedesk.ru',
@@ -136,10 +141,7 @@ class FirstScreenBody extends StatelessWidget {
                     phoneNumber: phone,
                     additionalId: 'uuid_$phone',
                   )
-                  ..additionalFields = {
-                    '20266': 'Простой вопрос',
-                    '20265': 'se_app'
-                  };
+                  ..additionalFields = {'20265': 'se_app'};
 
                 Navigator.of(context).push(MaterialPageRoute(builder: (ctx) {
                   return ChatPage(usedeskChat);
